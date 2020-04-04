@@ -27,7 +27,7 @@ SECTION .TEXT
 
 ; k = n + 1, j, result
 %macro second_sum 3
-        xor     %3, %3          ; set result to 0
+        xor     %3, %3
         mov     rax, 8          ; rax = 8
         mul     %1              ; rax = 8k
         add     rax, %2         ; rax = 8k + j
@@ -48,13 +48,13 @@ SECTION .TEXT
 
         mov     rax, 16
         mul     rcx 
-point1:
+
         mov     rcx, rax        ; rcx = 16 ^ (k - n + 1)
 
         inc     %1              ; k++
         mov     rax, 8
         mul     %1              ; rax = 8 * (k + 1)
-point2:
+
         add     rax, %2         ; rax = 8 * (k + 1) + j
  
         mul     rcx             ; rax = 16 ^ (k - n + 1) * (8 * (k + 1) + j)
@@ -67,50 +67,108 @@ point2:
 
 %endmacro
 
+;power, modulo, result
+%macro slow_pow_mod 3
+        mov     %3, 1           ; result = 1
+%%loop:
+        cmp     %1, 0           
+        je      %%end             ; if pow == 0, end loop
+        mov     rax, 16 
+        xor     rdx, rdx        
+        mul     %3              ; rax = result * 16
+        div     %2              ; rdx = (result * 16) % modulo
+        mov     %3, rdx         ; result = (result * 16) % modulo
+        dec     %1              ; power --
+        jmp     %%loop            ; continue        
+%%end:
+%endmacro
+
+;j, n, result
+%macro first_sum 3
+        push    rbx
+        push    rcx
+        push    r12
+        push    r13
+        xor     rcx, rcx        ; k = 0
+        mov     rbx, %1         ; store 8k + j in rbx
+        xor     %3, %3          ; set sum to 0
+        mov     r12, %2         ; store n - k in r12
+%%loop:
+        cmp     rcx, %2
+        jg      %%end           ; if k > n, end loop
+
+        push    r12
+        slow_pow_mod r12, rbx, r13 ;r13 = 16 ^ (n - k) % (8k + j)
+        pop     r12
+
+        xor     rax, rax
+        mov     rdx, r13        ; (16 ^ (n - k) % (8k + j)) * 2^64
+
+        div     rbx             ; rax = ((16 ^ (n - k) % (8k + j)) * 2^64)
+                                ;       -----------------------------------
+                                ;                   8k + j
+
+        add     %3, rax         ; add component to sum
+
+        inc     rcx             ; k++
+        dec     r12             ; r12 = n - (k + 1)
+        add     rbx, 8          ; rbx = 8(k + 1) + j
+        jmp     %%loop          ; continue
+%%end:
+        pop     r13
+        pop     r12
+        pop     rcx
+        pop     rbx
+%endmacro
+
+; n, j, result
+%macro count_sj 3
+        push    rbx
+        push    r12
+        push    r14
+
+        mov     rsi, %2         ; j
+        mov     r8, %1          ; n
+        first_sum rsi, r8, r14  ; j, n, result
+
+        mov     rsi, %2         ; j
+        mov     r8, %1          ; n
+        inc     r8              ; n + 1
+
+        second_sum r8, rsi, %3  ; k = n + 1, j, result
+
+        add     %3, r14
+        pop     r14
+        pop     r12
+        pop     rbx
+%endmacro
+
 pix:
-        ; push    rbx
-        ; push    rsp
-        ; push    rbp
-        ; push    r12
-        ; push    r13
-        ; push    r14
-        ; push    r15
+        push    rbx
+        push    rsp
+        push    rbp
+        push    r12
+        push    r13
+        push    r14
+        push    r15
 
         mov     r12, rdi
         mov     r13, rsi
         mov     r14, rdx
 
-        rdtsc                       ;EDX:EAX             ;
+        rdtsc                    ; EDX:EAX  
         shl     rdx, 32
         add     rdx, rax
-        mov     rdi, rdx
-        mov     rax, 0
-        call    pixtime
+        
 
-        mov     rsi, 7
-        mov     r8, 5
-
-        second_sum rsi, r8, r15
-
+        count_sj 16, 5, r15; n, j, result
         mov     rdi, r15
         mov     rax, 0
         call    pixtime
 
 
-        jmp     my_exit
+        jmp     exit_0
 
-
-
-; _loop:
-;         mov     r8, 1
-;         lock\
-;         xadd    [pidx], r8  ;store m value in r8
-;         cmp     r8, max
-;         jge     _pix_end
-
-
-
-;         jmp     _loop
 _pix_end:
         pop     r15
         pop     r14
@@ -130,3 +188,13 @@ my_exit:
         mov     rdi, r12
         mov     eax, SYS_EXIT
         syscall
+        
+; _loop:
+;         mov     r8, 1
+;         lock\
+;         xadd    [pidx], r8  ;store m value in r8
+
+
+;         cmp     r8, max
+;         jge     _pix_end
+;         jmp     _loop
