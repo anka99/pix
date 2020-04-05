@@ -68,19 +68,30 @@ SECTION .TEXT
 %endmacro
 
 ;power, modulo, result
-%macro slow_pow_mod 3
-        mov     %3, 1           ; result = 1
-%%loop:
-        cmp     %1, 0           
-        je      %%end             ; if pow == 0, end loop
-        mov     rax, 16 
-        xor     rdx, rdx        
-        mul     %3              ; rax = result * 16
-        div     %2              ; rdx = (result * 16) % modulo
-        mov     %3, rdx         ; result = (result * 16) % modulo
-        dec     %1              ; power --
-        jmp     %%loop            ; continue        
-%%end:
+%macro quick_pow_mod 3
+
+        mov    %3, 0x1       ; store result in %3
+        test   %1, %1
+        je     %%end         ; if power == 0 result is 1
+        mov    ecx, 0x10     ; store power of 16 in rcx
+        mov    %3, 0x1       ; store result in %3
+%%loop:	
+        test   %1, 0x1       
+        je     %%even_odd    ; for even power skip odd part
+        mov    rax, %3
+        xor    edx, edx
+        imul   rax, rcx      ; multiply result by current power of 16
+        div    %2            ; rdx = result % modulo
+        mov    %3, rdx       ; result = result % modulo
+%%even_odd:
+        imul   rcx, rcx      ; double current power of 16
+        xor    edx, edx
+        mov    rax, rcx
+        div    %2           ; rdx = (current power of 16) % modulo
+        shr    %1, 1        ; power = power/2
+        mov    rcx,rdx      ; rcx = rdx = (current power of 16) % modulo
+        jne    %%loop       ; continue if power != 0
+  %%end:	   	
 %endmacro
 
 ;j, n, result
@@ -98,7 +109,9 @@ SECTION .TEXT
         jg      %%end           ; if k > n, end loop
 
         push    r12
-        slow_pow_mod r12, rbx, r13 ;r13 = 16 ^ (n - k) % (8k + j)
+        push    rcx
+        quick_pow_mod r12, rbx, r13 ;r13 = 16 ^ (n - k) % (8k + j)
+        pop     rcx
         pop     r12
 
         xor     rax, rax
@@ -156,12 +169,14 @@ pix:
         mov     r13, rsi
         mov     r14, rdx
 
-        rdtsc                    ; EDX:EAX  
-        shl     rdx, 32
-        add     rdx, rax
-        
+        ; rdtsc                    ; EDX:EAX  
+        ; shl     rdx, 32
+        ; add     rdx, rax
 
-        count_sj 16, 5, r15; n, j, result
+        mov     rsi, 32
+        mov     rdi, 5
+        ; n, j, result
+        count_sj 32, 5, r15
         mov     rdi, r15
         mov     rax, 0
         call    pixtime
