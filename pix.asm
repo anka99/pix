@@ -1,9 +1,3 @@
-; SYS_READ  equ 0
-; SYS_WRITE equ 1
-; SYS_EXIT  equ 60
-; STDIN     equ 0
-; STDOUT    equ 1
-
 %define ppi r12
 %define pidx r13
 %define max r14
@@ -16,7 +10,8 @@ SECTION .TEXT
         GLOBAL pix
         extern pixtime
 
-; k = n + 1, j, result
+; Counts second sum from stackexchange formula
+; Macro arguments: k = n + 1, j, result
 %macro second_sum 3
         xor     %3, %3          ; set result to 0
         mov     rax, 8          ; rax = 8
@@ -36,12 +31,8 @@ SECTION .TEXT
         mov     rdi, rax
 
         add     %3, rax         ; add component to sum
-
-        ; mov     rax, 16
-        ; mul     rcx 
-
-        ; mov     rcx, rax        ; rcx = 16 ^ (k - n + 1)
-        shl     rcx, 4
+        
+        shl     rcx, 4          ; rcx = 16 ^ (k - n + 1)
 
         inc     %1              ; k++
         mov     rax, 8
@@ -54,12 +45,13 @@ SECTION .TEXT
         jne     %%end
         mov     rdi, rax        ; rdi = 16 ^ (k - n + 1) * (8 * (k + 1) + j)
         
-        jmp     %%loop
+        jmp     %%loop          ; continue loop
 %%end:
 
 %endmacro
 
-;power, modulo, result
+; Counts 16 to the given power, taking given modulo in O(log power)
+; Macro arguments: power, modulo, result
 %macro quick_pow_mod 3
 
         mov    %3, 0x1       ; store result in %3
@@ -86,7 +78,8 @@ SECTION .TEXT
   %%end:	   	
 %endmacro
 
-;j, n, result
+; Counts first sum from stackexchange formula
+; Macro arguments: j, n, result
 %macro first_sum 3
         push    rbx
         push    rcx
@@ -106,8 +99,8 @@ SECTION .TEXT
         pop     rcx
         pop     r12
 
-        xor     rax, rax
-        mov     rdx, r13        ; (16 ^ (n - k) % (8k + j)) * 2^64
+        xor     rax, rax        ; set rax to 0
+        mov     rdx, r13        ; rdx:rax = (16 ^ (n - k) % (8k + j)) * 2^64
         cmp     rbx, 1
         je      %%inc
         div     rbx             ; rax = ((16 ^ (n - k) % (8k + j)) * 2^64)
@@ -127,18 +120,19 @@ SECTION .TEXT
         pop     rbx
 %endmacro
 
+; Prints number of processor cycles
 %macro print_pixtime 0
-        rdtsc                       ;EDX:EAX             ;
+rdtsc                           ; EDX:EAX             
         shl     rdx, 32
-        add     rdx, rax
+        add     rdx, rax        ; store rdtsc result in rdx
         mov     rdi, rdx
         mov     rax, 0
         call    pixtime
 %endmacro
 
 pix:
-        push    rbx
-        push    rsp
+        push    rbx             ; store on stack values of registers that 
+        push    rsp             ; should remain unchanged
         push    rbp
         push    r12
         push    r13
@@ -149,7 +143,7 @@ pix:
         mov     pidx, rsi
         mov     max, rdx
         
-        print_pixtime
+        print_pixtime           ; call function pixtime
 
 _loop:
         push    ppi             ; store ppi pointer on stack
@@ -193,8 +187,8 @@ _loop:
         pop     r13             ; r13 = 2S4
         sub     r15, r13
         pop     r13             ; r13 = 4S1
-        sub     r15, r13        ; r15 = {4{16nS1}−2{16nS4}−{16nS5}−{16nS6}} * 2 ^ 64
-
+        sub     r15, r13        ; r15 = 
+                                ; {4{16nS1}−2{16nS4}−{16nS5}−{16nS6}} * 2 ^ 64
         pop     r13             ; restore value of r13
 
         shr     r15, 32         ; take 32 elder bits
@@ -207,9 +201,9 @@ _loop:
         jmp     _loop
 
 _pix_end:
-        pop    ppi
-        print_pixtime
-        pop     r15
+        pop    ppi              ; ppi is on top of the stack
+        print_pixtime           ; call function pixtime
+        pop     r15             ; pop unchanged registers from stack 
         pop     r14
         pop     r13
         pop     r12
@@ -238,13 +232,3 @@ count_sj_function:
         pop     r14
         pop     rbx
         ret
-
-; exit_0:
-;         mov     eax, SYS_EXIT
-;         mov     rdi, 0              ; kod powrotu 0
-;         syscall
-
-; my_exit:
-;         mov     rdi, [rsp + 8 * 3]
-;         mov     eax, SYS_EXIT
-;         syscall
