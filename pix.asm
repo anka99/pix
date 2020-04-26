@@ -2,10 +2,6 @@
 %define pidx r13
 %define max r14
 
-SECTION .DATA
-    hello:     db 'Hello world!',10
-    helloLen:  equ $-hello
-
 SECTION .TEXT
         GLOBAL pix
         extern pixtime
