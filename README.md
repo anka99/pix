@@ -29,3 +29,22 @@ void pixtime(uint64_t clock_tick) {
 i przekazać jej jako wartość parametru clock_tick liczbę cykli procesora, jaka upłynęła od jego uruchomienia, uzyskaną za pomocą rozkazu rdtsc.
 
 Rozwiązanie ma używać wyłącznie arytmetyki stałopozycyjnej.
+
+Oceniane będą poprawność i szybkość działania programu, zajętość pamięci (rozmiary poszczególnych sekcji), przestrzeganie konwencji ABI oraz styl kodowania. Tradycyjny styl programowania w asemblerze polega na rozpoczynaniu etykiet od pierwszej kolumny, mnemoników od dziewiątej kolumny, a listy argumentów od siedemnastej kolumny. Inny akceptowalny styl prezentowany jest w przykładach pokazywanych na zajęciach. Kod powinien być dobrze skomentowany, co oznacza między innymi, że każda procedura powinna być opatrzona informacją, co robi, jak przekazywane są do niej parametry, jak przekazywany jest jej wynik, jakie rejestry modyfikuje. To samo dotyczy makr. Komentarza wymagają także wszystkie kluczowe lub nietrywialne linie wewnątrz procedur lub makr. W przypadku asemblera nie jest przesadą komentowania prawie każdej linii kodu, ale należy jak ognia unikać komentarzy typu „zwiększenie wartości rejestru rax o 1”.
+
+Jako rozwiązanie należy oddać plik pix.asm. Program będzie kompilowany i linkowany z programem napisanym w języku C poleceniami:
+
+nasm -f elf64 -w+all -w+error -o pix.o pix.asm
+gcc -std=c11 -Wall -Wextra -O2 -o pix *.c pix.o
+
+Od strony języka C będziemy korzystać z następującego pliku nagłówkowego pix.h:
+
+#ifndef PIX_H
+#define PIX_H
+
+#include <stdint.h>
+
+void pix(uint32_t *ppi, uint64_t *pidx, uint64_t max);
+void pixtime(uint64_t clock_tick);
+
+#endif
